@@ -1,19 +1,23 @@
 ## Introduction
 A very simple Naive Bayes spam filter intended to run on posts submitted to a website before they are saved to DB. It can be trained by placing plain text ham files and spam files in the relevant directory.
 
-At the moment it must be called explicitly. I plan to run it as a daemon and communicate with it synchronously, so it does not need to be trained each time a message is posted.
+It is designed to run in the background and called from a webapp or other via RPC.
 
-## Installation
-- pip install nltk
+## Installation and use
+- Install rabbitMQ or another AMQP software, if you don't have one already
+- pip install nltk, pika
 - populate the train/spam and train/ham directories with basic text files of the relevant class
-- ``python classifier.py`` will train over 2/3 of the data, and test over the remaining 1/3.
+- ``python NaiveBayesSpamDaemon/test.py`` will train over 2/3 of the data, and test over the remaining 1/3.
 
-To use, simply call ``is_message_spam``, providing a text string as argument.
+You can use it directly, or via RPC to a server.
+
+- **Directly**: Create an instance of ``NaiveBayesDaemonClassifier``, then call ``is_message_spam``, providing a text string as argument.
+
+- **RPC**: Run the binary ``classify_server``, then Create an instance of ``NaiveBayesDaemonClient`` and call ``is_message_spam``, providing a text string as argument. (See ``classify_example.py``)
+
 
 ## Future Work
-* Allow the provision of seperate training and testing sets.
-* Function as a proper module.
-* Implement a Daemon which will accept strings through a socket or message passing protocol and return a yes/no spam result.
+* More cleanup. Particularly regarding installation, settings and running the binary properly.
 
 
 ## License
