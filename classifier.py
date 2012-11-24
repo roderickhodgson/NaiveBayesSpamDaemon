@@ -1,53 +1,50 @@
 from os import listdir, path
 from nltk import NaiveBayesClassifier
 from nltk.tokenize import word_tokenize
-from nltk.classify import accuracy
 
 import settings
 
-def data_files(dir):
-    return [path.join(dir, f) for f in listdir(dir) if f[0]!="."]
+class NaiveBayesDaemonClassifier(object):
+    @staticmethod
+    def data_files(dir):
+        return [path.join(dir, f) for f in listdir(dir) if f[0]!="."]
 
-def get_word_features(file, string=None):
-    if string:
-        data = string
-    else:
+    @staticmethod
+    def get_word_features(data):
+        words = word_tokenize(data)
+        return {word: True for word in words}
+
+    @staticmethod
+    def get_word_features_from_file(file):
         with open(file, 'r') as f:
             data = f.read()
-    words = word_tokenize(data)
-    return {word: True for word in words}
+        return NaiveBayesDaemonClassifier.get_word_features(data)
 
-def format_features(train_files, label):
-    files = data_files(train_files)
+    @staticmethod
+    def format_features(location, label):
+        files = NaiveBayesDaemonClassifier.data_files(location)
 
-    train_features = map(get_word_features, files)
-    return [(f, label) for f in train_features]
-
-
-def is_message_spam(message):
-    ham_train = format_features(path.join(settings.train_dir, settings.ham_dir), 'ham')
-    spam_train = format_features(path.join(settings.train_dir, settings.spam_dir), 'spam')
-
-    training = ham_train+spam_train
-
-    classifier = NaiveBayesClassifier.train(training)
-
-    return classifier.classify(get_word_features(None, message)) == 'spam'
+        features = map(NaiveBayesDaemonClassifier.get_word_features_from_file, files)
+        return [(f, label) for f in features]
 
 
+    def __init__(self):
+        self.classifier = None
 
-def test():
-    ham_train = format_features(path.join(settings.train_dir, settings.ham_dir), 'ham')
-    spam_train = format_features(path.join(settings.train_dir, settings.spam_dir), 'spam')
+    def _init_classifier(self):
+        self._prepare_train()
+        self.classifier = NaiveBayesClassifier.train(self.training)
 
-    training = ham_train[:-len(ham_train)/3]+spam_train[:-len(spam_train)/3]
-    test = ham_train[-len(ham_train)/3:]+spam_train[-len(spam_train)/3:]
 
-    classifier = NaiveBayesClassifier.train(training)
+    def _prepare_train(self):
+        self.ham_train = self.format_features(path.join(settings.train_dir, settings.ham_dir), 'ham')
+        self.spam_train = self.format_features(path.join(settings.train_dir, settings.spam_dir), 'spam')
 
-    classifier.show_most_informative_features(20)
+        self.training = self.ham_train+self.spam_train
 
-    print "Accuracy: %f" % accuracy(classifier, test)
 
-if __name__=="__main__":
-    test()
+    def is_message_spam(self, message):
+        if self.classifier == None:
+            self._init_classifier()
+        return self.classifier.classify(get_word_features(message)) == 'spam'
+
