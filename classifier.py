@@ -46,5 +46,5 @@ class NaiveBayesDaemonClassifier(object):
     def is_message_spam(self, message):
         if self.classifier == None:
             self._init_classifier()
-        return self.classifier.classify(get_word_features(message)) == 'spam'
+        return self.classifier.classify(self.get_word_features(message)) == 'spam'
 
