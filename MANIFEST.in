@@ -1,1 +1,3 @@
 include README.markdown
+include classify_example.py
+include test.py

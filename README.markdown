@@ -1,23 +1,29 @@
 ## Introduction
-A very simple Naive Bayes spam filter intended to run on posts submitted to a website before they are saved to DB. It can be trained by placing plain text ham files and spam files in the relevant directory.
+A very simple Naive Bayes spam filter intended to run on posts submitted to a website before they are saved to DB. It can be trained by placing plain text ham files and spam files in the relevant directory, where each file represents a possible message.
 
 It is designed to run in the background and called from a webapp or other via RPC.
+## Dependencies
+- pyyaml
+- nltk
+- pika
+- wsgiref
+- A working and running AMQP server
 
 ## Installation and use
-- Install rabbitMQ or another AMQP software, if you don't have one already
-- pip install nltk, pika
-- populate the train/spam and train/ham directories with basic text files of the relevant class
-- ``python NaiveBayesSpamDaemon/test.py`` will train over 2/3 of the data, and test over the remaining 1/3.
+- ``python setup.py install``
+- ``python test.py --ham=[DIRECTORY CONTAINING HAM FILES] --spam=[DIRECTORY CONTAINING SPAM FILES]`` will train over 2/3 of the data, and test over the remaining 1/3.
 
 You can use it directly, or via RPC to a server.
 
-- **Directly**: Create an instance of ``NaiveBayesDaemonClassifier``, then call ``is_message_spam``, providing a text string as argument.
+- **Directly**: Create an instance of ``NaiveBayesDaemonClassifier`` with spam and ham file directory locations as arguments, then call ``is_message_spam``, providing a text string as argument. The clasifier will be trained the first time you call ``is_message_spam`` for any given instance of ``NaiveBayesDaemonClassifier``.
 
-- **RPC**: Run the binary ``classify_server``, then Create an instance of ``NaiveBayesDaemonClient`` and call ``is_message_spam``, providing a text string as argument. (See ``classify_example.py``)
+- **RPC**: This is (in my opinion) a much better option for webapps. You could even run the classifier on a seperate machine. Run the binary ``classify_server --ham=[DIRECTORY CONTAINING HAM FILES] --spam=[DIRECTORY CONTAINING SPAM FILES]``, then, in your app, create an instance of ``NaiveBayesDaemonClient`` and call ``is_message_spam``, providing a text string as argument. (See ``classify_example.py`` for an example). This call will timeout after one second, classifying the content as ham (in case the server crashes or isn't running).
 
 
 ## Future Work
-* More cleanup. Particularly regarding installation, settings and running the binary properly.
+* Run server as upstart script
+* Allow for remote rabbitMQ server
+* Proper testing
 
 
 ## License
