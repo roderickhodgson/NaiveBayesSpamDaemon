@@ -4,6 +4,16 @@ import uuid
 from time import time
 from nltk import NaiveBayesClassifier
 from nltk.tokenize import word_tokenize
+from optparse import OptionParser
+
+class NaiveBayesOptionParser(OptionParser):
+    def __init__(self):
+        OptionParser.__init__(self)
+        self.add_option("-s", "--spam", dest="spam_dir", default="spam",
+                          help="Directory containing plaintext files for each spam message")
+        self.add_option("-m", "--ham", dest="ham_dir", default="ham",
+                          help="Directory containing plaintext files for each ham message")
+    
 
 class NaiveBayesDaemonClassifier(object):
 

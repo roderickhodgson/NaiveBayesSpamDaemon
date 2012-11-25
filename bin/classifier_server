@@ -2,43 +2,41 @@
 import sys
 from optparse import OptionParser
 import pika
-from NaiveBayesSpamDaemon.classifier import NaiveBayesDaemonClassifier as nbc
+from NaiveBayesSpamDaemon.classifier import NaiveBayesOptionParser, NaiveBayesDaemonClassifier as nbc
 
-parser = OptionParser()
-parser.add_option("-s", "--spam", dest="spam_dir", default="spam",
-                  help="Directory containing plaintext files for each spam message")
-parser.add_option("-m", "--ham", dest="ham_dir", default="ham",
-                  help="Directory containing plaintext files for each ham message")
+def main():
+    parser = NaiveBayesOptionParser()
+    (options, args) = parser.parse_args()
 
-(options, args) = parser.parse_args()
+    try:
+        connection = pika.BlockingConnection(pika.ConnectionParameters(
+            host='localhost'))
+    except pika.exceptions.AMQPConnectionError:
+        print "ERROR: Could not connect to AMQP server. Is an AMQP server running?"
+        sys.exit(1)
 
-try:
-    connection = pika.BlockingConnection(pika.ConnectionParameters(
-        host='localhost'))
-except pika.exceptions.AMQPConnectionError:
-    print "ERROR: Could not connect to AMQP server. Is an AMQP server running?"
-    sys.exit(1)
+    channel = connection.channel()
 
-channel = connection.channel()
+    channel.queue_declare(queue='naive_bayes_rpc_queue')
 
-channel.queue_declare(queue='naive_bayes_rpc_queue')
+    classifier = nbc(options)
 
-classifier = nbc(options)
+    def on_request(ch, method, props, body):
+        response = classifier.is_message_spam(body)
+        print " [x] Message found to be %s" % ("spam" if response==True else "ham")
 
-def on_request(ch, method, props, body):
-    response = classifier.is_message_spam(body)
-    print " [x] Message found to be %s" % ("spam" if response==True else "ham")
+        ch.basic_publish(exchange='',
+                         routing_key=props.reply_to,
+                         properties=pika.BasicProperties(correlation_id = \
+                                                         props.correlation_id),
+                         body=str(response))
+        ch.basic_ack(delivery_tag = method.delivery_tag)
 
-    ch.basic_publish(exchange='',
-                     routing_key=props.reply_to,
-                     properties=pika.BasicProperties(correlation_id = \
-                                                     props.correlation_id),
-                     body=str(response))
-    ch.basic_ack(delivery_tag = method.delivery_tag)
+    channel.basic_qos(prefetch_count=1)
+    channel.basic_consume(on_request, queue='naive_bayes_rpc_queue')
 
-channel.basic_qos(prefetch_count=1)
-channel.basic_consume(on_request, queue='naive_bayes_rpc_queue')
+    print " [x] Awaiting RPC requests"
+    channel.start_consuming()
 
-print " [x] Awaiting RPC requests"
-channel.start_consuming()
-
+if __name__=='__main__':
+    main()
