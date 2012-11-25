@@ -1,7 +1,16 @@
 #!/usr/bin/env python
 import sys
+from optparse import OptionParser
 import pika
 from NaiveBayesSpamDaemon.classifier import NaiveBayesDaemonClassifier as nbc
+
+parser = OptionParser()
+parser.add_option("-s", "--spam", dest="spam_dir", default="spam",
+                  help="Directory containing plaintext files for each spam message")
+parser.add_option("-m", "--ham", dest="ham_dir", default="ham",
+                  help="Directory containing plaintext files for each ham message")
+
+(options, args) = parser.parse_args()
 
 try:
     connection = pika.BlockingConnection(pika.ConnectionParameters(
@@ -14,7 +23,7 @@ channel = connection.channel()
 
 channel.queue_declare(queue='naive_bayes_rpc_queue')
 
-classifier = nbc()
+classifier = nbc(options)
 
 def on_request(ch, method, props, body):
     response = classifier.is_message_spam(body)

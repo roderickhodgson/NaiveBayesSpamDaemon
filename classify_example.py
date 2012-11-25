@@ -2,5 +2,7 @@
 from NaiveBayesSpamDaemon.classifier import NaiveBayesDaemonClient
 
 client = NaiveBayesDaemonClient()
-test_str = "Hello!"
-print "Is \"%s\" spam? %d" % (test_str, client.is_message_spam(test_str))
+check_str = lambda test_str: "Is \"%s\" spam? %s" % (test_str, "yes" if client.is_message_spam(test_str) else "no")
+
+print check_str("Hello!")
+print check_str("Our team is a unique producer of quality fake documents")

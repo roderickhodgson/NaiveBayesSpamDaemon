@@ -1,7 +1,7 @@
 from os import listdir, path
-import settings
 import pika
 import uuid
+from time import time
 from nltk import NaiveBayesClassifier
 from nltk.tokenize import word_tokenize
 
@@ -9,6 +9,8 @@ class NaiveBayesDaemonClassifier(object):
 
     @staticmethod
     def data_files(dir):
+        if not path.isdir(dir):
+            raise IOError('Directory "%s" does not exist. Have you specified the correct spam and ham directories at the command line' % dir)
         return [path.join(dir, f) for f in listdir(dir) if f[0]!="."]
 
     @staticmethod
@@ -30,17 +32,20 @@ class NaiveBayesDaemonClassifier(object):
         return [(f, label) for f in features]
 
 
-    def __init__(self):
+    def __init__(self, options):
         self.classifier = None
+        self.training = None
+        self.options = options
 
     def _init_classifier(self):
-        self._prepare_train()
+        if not self.training:
+            self._prepare_train()
         self.classifier = NaiveBayesClassifier.train(self.training)
 
 
     def _prepare_train(self):
-        self.ham_train = self.format_features(path.join(settings.train_dir, settings.ham_dir), 'ham')
-        self.spam_train = self.format_features(path.join(settings.train_dir, settings.spam_dir), 'spam')
+        self.ham_train = self.format_features(self.options.ham_dir, 'ham')
+        self.spam_train = self.format_features(self.options.spam_dir, 'spam')
 
         self.training = self.ham_train+self.spam_train
 
@@ -52,6 +57,8 @@ class NaiveBayesDaemonClassifier(object):
 
 class NaiveBayesDaemonClient(object):
     def __init__(self):
+        self.timeout = 1 #timeout after 5 seconds
+
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(
                 host='localhost'))
 
@@ -77,7 +84,10 @@ class NaiveBayesDaemonClient(object):
                                          correlation_id = self.corr_id,
                                          ),
                                    body=message)
+        start = time()
         while self.response is None:
+            if time()-start > self.timeout:
+                return False
             self.connection.process_data_events()
         return self.response == "True"
 
