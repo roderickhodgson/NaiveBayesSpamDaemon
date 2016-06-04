@@ -1,4 +1,5 @@
 from os import listdir, path
+import codecs
 import pika
 import uuid
 from time import time
@@ -13,7 +14,7 @@ class NaiveBayesOptionParser(OptionParser):
                           help="Directory containing plaintext files for each spam message")
         self.add_option("-m", "--ham", dest="ham_dir", default="ham",
                           help="Directory containing plaintext files for each ham message")
-    
+
 
 class NaiveBayesDaemonClassifier(object):
 
@@ -30,7 +31,7 @@ class NaiveBayesDaemonClassifier(object):
 
     @staticmethod
     def get_word_features_from_file(file):
-        with open(file, 'r') as f:
+        with codecs.open(file, 'r', encoding='utf-8') as f:
             data = f.read()
         return NaiveBayesDaemonClassifier.get_word_features(data)
 
@@ -100,4 +101,3 @@ class NaiveBayesDaemonClient(object):
                 return False
             self.connection.process_data_events()
         return self.response == "True"
-
